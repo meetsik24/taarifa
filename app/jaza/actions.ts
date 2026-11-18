@@ -18,7 +18,7 @@ export async function createFormLink(
   const label = cleanLabel(formData.get("label")) || "Fomu ya taarifa";
   const link = await insertFormLink({ label, createdBy: session.email });
   revalidatePath("/jaza");
-  return { ok: "Kiungo kimetengenezwa. Nakili au shiriki.", token: link.token };
+  return { ok: "Kiungo kimetengenezwa.", token: link.token };
 }
 
 export async function stopFormLink(formData: FormData): Promise<void> {

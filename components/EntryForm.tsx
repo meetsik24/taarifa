@@ -17,7 +17,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { formatCount, formatDate } from "@/lib/format";
 import { ACTIVITY_TYPES, STATUSES } from "@/lib/options";
-import { councilsFor, KANDA, MIKOA } from "@/lib/places";
+import { councilsFor, KANDA, mikoaFor } from "@/lib/places";
 import { cn } from "cn";
 
 function Field({
@@ -119,6 +119,7 @@ export function EntryForm({ againHref }: { againHref: string }) {
   const [kanda, setKanda] = useState("");
   const [mkoa, setMkoa] = useState("");
   const [halmashauri, setHalmashauri] = useState("");
+  const regions = mikoaFor(kanda);
   const councils = councilsFor(mkoa);
 
   useEffect(() => {
@@ -177,7 +178,7 @@ export function EntryForm({ againHref }: { againHref: string }) {
         <CardHeader>
           <CardTitle>Mahali na tarehe</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Mkoa na halmashauri vinatoka kwenye orodha ya Tovuti Kuu ya Serikali. Chagua mkoa kwanza, kisha halmashauri ya mkoa huo.
+            Chagua kanda, kisha mkoa wa kanda hiyo, kisha halmashauri ya mkoa huo.
           </p>
         </CardHeader>
         <CardContent>
@@ -201,7 +202,11 @@ export function EntryForm({ againHref }: { againHref: string }) {
                 options={KANDA}
                 invalid={Boolean(errors.kanda)}
                 describedBy={errors.kanda ? "kanda-error" : undefined}
-                onValueChange={setKanda}
+                onValueChange={(next) => {
+                  setKanda(next);
+                  setMkoa("");
+                  setHalmashauri("");
+                }}
               />
             </Field>
             <Field name="mkoa" label="Mkoa" required error={errors.mkoa}>
@@ -210,7 +215,9 @@ export function EntryForm({ againHref }: { againHref: string }) {
                 name="mkoa"
                 required
                 value={mkoa}
-                options={MIKOA}
+                options={regions}
+                placeholder={kanda ? "Chagua" : "Chagua kanda kwanza"}
+                disabled={!kanda}
                 invalid={Boolean(errors.mkoa)}
                 describedBy={errors.mkoa ? "mkoa-error" : undefined}
                 onValueChange={(next) => {
@@ -220,31 +227,18 @@ export function EntryForm({ againHref }: { againHref: string }) {
               />
             </Field>
             <Field name="halmashauri" label="Halmashauri" required error={errors.halmashauri}>
-              <>
-                <SearchableSelect
-                  id="halmashauri"
-                  name="halmashauri"
-                  required
-                  value={halmashauri}
-                  options={councils}
-                  placeholder={mkoa ? "Chagua" : "Chagua mkoa kwanza"}
-                  disabled={!mkoa}
-                  invalid={Boolean(errors.halmashauri)}
-                  describedBy={
-                    errors.halmashauri
-                      ? "halmashauri-error"
-                      : mkoa && councils.length === 0
-                        ? "halmashauri-hint"
-                        : undefined
-                  }
-                  onValueChange={setHalmashauri}
-                />
-                {mkoa && councils.length === 0 ? (
-                  <p id="halmashauri-hint" className="text-sm text-muted-foreground">
-                    Orodha ya serikali haina halmashauri za mkoa huu.
-                  </p>
-                ) : null}
-              </>
+              <SearchableSelect
+                id="halmashauri"
+                name="halmashauri"
+                required
+                value={halmashauri}
+                options={councils}
+                placeholder={mkoa ? "Chagua" : "Chagua mkoa kwanza"}
+                disabled={!mkoa}
+                invalid={Boolean(errors.halmashauri)}
+                describedBy={errors.halmashauri ? "halmashauri-error" : undefined}
+                onValueChange={setHalmashauri}
+              />
             </Field>
           </div>
         </CardContent>

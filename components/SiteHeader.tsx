@@ -18,7 +18,7 @@ export function SiteHeader({
 }) {
   const title =
     active === "form"
-      ? "Kiungo cha fomu"
+      ? "Viungo"
       : active === "login"
         ? "Ingia"
         : active === "admins"

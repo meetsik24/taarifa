@@ -1,135 +1,107 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { Copy01Icon, Link01Icon, Share08Icon } from "@hugeicons/core-free-icons";
+import { useActionState, useState } from "react";
+import { Copy01Icon, Link01Icon } from "@hugeicons/core-free-icons";
 import { createFormLink, stopFormLink, type LinkFormState } from "@/app/jaza/actions";
 import { AppIcon } from "@/components/app-icon";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { formatDate } from "@/lib/format";
 
 export type ShareLink = {
   id: number;
   token: string;
   label: string;
-  createdAt: string;
-  revoked: boolean;
 };
 
-function linkUrl(token: string): string {
-  return `${window.location.origin}/fomu/${token}`;
+function linkUrl(origin: string, token: string): string {
+  const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/fomu/${token}`;
 }
 
-export function FormLinkManager({ links }: { links: ShareLink[] }) {
+export function FormLinkManager({ links, origin }: { links: ShareLink[]; origin: string }) {
   const [state, action, pending] = useActionState<LinkFormState, FormData>(createFormLink, null);
-  const [origin, setOrigin] = useState("");
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [canShare, setCanShare] = useState(false);
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-    setCanShare(typeof navigator.share === "function");
-  }, []);
 
   async function copyLink(id: number, token: string): Promise<void> {
-    await navigator.clipboard.writeText(linkUrl(token));
+    const url = linkUrl(origin, token);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const field = document.createElement("textarea");
+      field.value = url;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.left = "-9999px";
+      document.body.appendChild(field);
+      field.select();
+      document.execCommand("copy");
+      field.remove();
+    }
     setCopiedId(id);
   }
 
-  async function shareLink(token: string, label: string): Promise<void> {
-    const url = linkUrl(token);
-    if (navigator.share) {
-      await navigator.share({ title: label, text: "Jaza taarifa ya WAD 2026", url });
-      return;
-    }
-    await navigator.clipboard.writeText(url);
-  }
-
   return (
-    <div className="flex flex-col gap-4">
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle>Tengeneza kiungo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={action} className="flex flex-col gap-4">
-            {state?.error ? (
-              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive" role="alert">
-                {state.error}
-              </p>
-            ) : null}
-            {state?.ok ? (
-              <p className="rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground" role="status">
-                {state.ok}
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="label">Jina la kiungo</Label>
-              <Input id="label" name="label" maxLength={80} placeholder="Mfano: Kanda ya Kaskazini" />
-            </div>
-            <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-              <AppIcon icon={Link01Icon} />
-              {pending ? "Inatengeneza…" : "Tengeneza kiungo"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <Card className="shadow-none">
+      <CardContent className="flex flex-col gap-5">
+        <form action={action} className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            id="label"
+            name="label"
+            maxLength={80}
+            placeholder="Jina la kiungo, mfano Kanda ya Kaskazini"
+            aria-label="Jina la kiungo"
+            className="sm:flex-1"
+          />
+          <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
+            <AppIcon icon={Link01Icon} />
+            {pending ? "Inatengeneza…" : "Tengeneza kiungo"}
+          </Button>
+        </form>
+        {state?.error ? (
+          <p className="text-sm font-medium text-destructive" role="alert">
+            {state.error}
+          </p>
+        ) : null}
 
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle>Viungo vya kushiriki</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {links.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Bado hakuna kiungo. Tengeneza kimoja, kisha nakili au shiriki. Mtu mwenye kiungo anajaza fomu, haoni dashibodi.
-            </p>
-          ) : (
-            links.map((link) => {
-              const url = origin ? `${origin}/fomu/${link.token}` : `/fomu/${link.token}`;
+        {links.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Bado hakuna kiungo.</p>
+        ) : (
+          <ul className="flex flex-col">
+            {links.map((link) => {
+              const url = linkUrl(origin, link.token);
               return (
-                <div
+                <li
                   key={link.id}
-                  className="flex flex-col gap-3 border-b border-border pb-4 last:border-0 last:pb-0"
+                  className="flex flex-col gap-2 border-t border-border py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                    <p className="text-base font-medium">{link.label}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(link.createdAt.slice(0, 10))}
-                      {link.revoked ? " · Imesitishwa" : ""}
-                    </p>
+                  <div className="min-w-0">
+                    <p className="font-medium">{link.label}</p>
+                    <p className="truncate text-sm text-muted-foreground">{url}</p>
                   </div>
-                  <Input readOnly value={url} aria-label={`Kiungo cha ${link.label}`} onFocus={(event) => event.currentTarget.select()} />
-                  {link.revoked ? (
-                    <p className="text-sm text-muted-foreground">Kiungo hiki hakifungui fomu tena.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void copyLink(link.id, link.token)}>
-                        <AppIcon icon={Copy01Icon} />
-                        {copiedId === link.id ? "Imenakiliwa" : "Nakili"}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => void copyLink(link.id, link.token)}
+                    >
+                      <AppIcon icon={Copy01Icon} />
+                      {copiedId === link.id ? "Imenakiliwa" : "Nakili"}
+                    </Button>
+                    <form action={stopFormLink}>
+                      <input type="hidden" name="id" value={link.id} />
+                      <Button type="submit" variant="outline">
+                        Sitisha
                       </Button>
-                      {canShare ? (
-                        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void shareLink(link.token, link.label)}>
-                          <AppIcon icon={Share08Icon} />
-                          Shiriki
-                        </Button>
-                      ) : null}
-                      <form action={stopFormLink}>
-                        <input type="hidden" name="id" value={link.id} />
-                        <Button type="submit" variant="outline" className="w-full sm:w-auto">
-                          Sitisha
-                        </Button>
-                      </form>
-                    </div>
-                  )}
-                </div>
+                    </form>
+                  </div>
+                </li>
               );
-            })
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

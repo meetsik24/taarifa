@@ -3,6 +3,7 @@ import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { clearSamples } from "@/app/actions";
 import { AppIcon } from "@/components/app-icon";
 import { DashboardChartsSlot } from "@/components/DashboardChartsSlot";
+import { ExportBar } from "@/components/ExportBar";
 import { DailyTable } from "@/components/DailyTable";
 import { Filters } from "@/components/Filters";
 import { KpiGrid } from "@/components/KpiGrid";
@@ -113,6 +114,7 @@ async function DashboardData({ filters }: { filters: FilterValues }) {
           </Card>
         </form>
       ) : null}
+      <ExportBar rows={rows} metrics={metrics} charts={charts} filters={filters} />
       <Filters filters={filters} places={places} shown={rows.length} total={all.length} />
       <KpiGrid metrics={metrics} />
       <DashboardChartsSlot series={charts} />

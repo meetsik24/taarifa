@@ -1,5 +1,5 @@
 import { isActivityType, isStatus } from "./options";
-import { councilsFor, isHalmashauriOf, isKanda, isMkoa } from "./places";
+import { isHalmashauriOf, isKanda, isMkoaOf } from "./places";
 import type { NewSubmission } from "./types";
 
 export type ParseResult =
@@ -68,13 +68,12 @@ export function parseSubmission(input: Record<string, string>): ParseResult {
   const kanda = required(input, "kanda", "Kanda", errors);
   if (kanda && !isKanda(kanda)) errors.kanda = "Chagua kanda kutoka kwenye orodha.";
   const mkoa = required(input, "mkoa", "Mkoa", errors);
-  if (mkoa && !isMkoa(mkoa)) errors.mkoa = "Chagua mkoa kutoka kwenye orodha.";
+  if (mkoa && kanda && isKanda(kanda) && !isMkoaOf(kanda, mkoa)) {
+    errors.mkoa = "Chagua mkoa wa kanda hii.";
+  }
   const halmashauri = required(input, "halmashauri", "Halmashauri", errors);
-  if (halmashauri && mkoa && isMkoa(mkoa) && !isHalmashauriOf(mkoa, halmashauri)) {
-    errors.halmashauri =
-      councilsFor(mkoa).length > 0
-        ? "Chagua halmashauri ya mkoa huu."
-        : "Mkoa huu hauna halmashauri kwenye orodha ya serikali.";
+  if (halmashauri && mkoa && isMkoaOf(kanda, mkoa) && !isHalmashauriOf(mkoa, halmashauri)) {
+    errors.halmashauri = "Chagua halmashauri ya mkoa huu.";
   }
   const shughuli = required(input, "shughuli", "Shughuli iliyopangwa", errors, 300);
   const aina = required(input, "aina", "Aina ya shughuli", errors);
