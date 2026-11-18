@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { clearSamples } from "@/app/actions";
 import { AppIcon } from "@/components/app-icon";
@@ -73,9 +74,9 @@ async function DashboardData({ filters }: { filters: FilterValues }) {
           <p className="text-sm leading-6">
             Umeingia, lakini taarifa hazikupatikana kwa sasa. Jaribu tena.
           </p>
-          <a href="/" className="text-sm font-medium text-primary">
+          <Link href="/" className="text-sm font-medium text-primary">
             Pakia upya
-          </a>
+          </Link>
         </CardContent>
       </Card>
     );
