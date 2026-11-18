@@ -8,5 +8,4 @@ export async function clearSamples(): Promise<void> {
   await requireAdmin();
   await deleteSamples();
   revalidatePath("/");
-  revalidatePath("/form");
 }

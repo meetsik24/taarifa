@@ -113,7 +113,7 @@ function CountPair({
   );
 }
 
-export function EntryForm() {
+export function EntryForm({ againHref }: { againHref: string }) {
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitEntry, null);
   const errors = state && !state.ok ? state.errors : {};
   const [kanda, setKanda] = useState("");
@@ -151,7 +151,7 @@ export function EntryForm() {
         </Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
-            href={`/form?m=${saved.id}`}
+            href={`${againHref}?m=${saved.id}`}
             className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}
           >
             <AppIcon icon={PencilEdit02Icon} />

@@ -4,15 +4,15 @@ import type { NewSubmission, Submission } from "./types";
 
 type SqlRow = {
   id: number;
-  created_at: Date | string;
+  created_at?: Date | string;
   tarehe: string;
   kanda: string;
   mkoa: string;
   halmashauri: string;
   shughuli: string;
   aina: Submission["aina"];
-  eneo: string;
-  mdau: string;
+  eneo?: string;
+  mdau?: string;
   hali: Submission["hali"];
   vvu_me: number;
   vvu_ke: number;
@@ -23,11 +23,11 @@ type SqlRow = {
   kondomu: number;
   pep: number;
   jipime: number;
-  ushahidi: string;
+  ushahidi?: string;
   sample: boolean;
 };
 
-const POOL_VERSION = 2;
+const POOL_VERSION = 4;
 const globalForDb = globalThis as unknown as { wadPool?: Pool; wadPoolVersion?: number };
 
 function databaseUrl(): string {
@@ -46,10 +46,12 @@ function pool(): Pool {
   const nextPool = new Pool({
     connectionString: databaseUrl(),
     max: 3,
-    connectionTimeoutMillis: 20_000,
-    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 12_000,
+    query_timeout: 12_000,
+    idleTimeoutMillis: 120_000,
     keepAlive: true,
-    allowExitOnIdle: true,
+    keepAliveInitialDelayMillis: 10_000,
+    allowExitOnIdle: false,
   });
   nextPool.on("error", () => undefined);
   if (process.env.VERCEL) attachDatabasePool(nextPool);
@@ -68,7 +70,24 @@ function resetPool(): void {
 function isTransientConnectionError(error: unknown): boolean {
   if (error instanceof AggregateError) return error.errors.some(isTransientConnectionError);
   const code = (error as { code?: string } | null)?.code;
-  return code === "ETIMEDOUT" || code === "ECONNRESET" || code === "ECONNREFUSED" || code === "ENOTFOUND" || code === "57P01";
+  if (
+    code === "ETIMEDOUT" ||
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    code === "EPIPE" ||
+    code === "ENOTFOUND" ||
+    code === "57P01" ||
+    code === "08000" ||
+    code === "08003" ||
+    code === "08006" ||
+    code === "57P05"
+  ) {
+    return true;
+  }
+  const message = error instanceof Error ? error.message : "";
+  if (/timeout|terminated|socket hang up|Connection ended/i.test(message)) return true;
+  const cause = (error as { cause?: unknown } | null)?.cause;
+  return Boolean(cause) && cause !== error && isTransientConnectionError(cause);
 }
 
 export async function dbQuery<T extends QueryResultRow>(
@@ -93,15 +112,15 @@ function asIsoTimestamp(value: Date | string): string {
 function mapRow(row: SqlRow): Submission {
   return {
     id: Number(row.id),
-    createdAt: asIsoTimestamp(row.created_at),
+    createdAt: row.created_at ? asIsoTimestamp(row.created_at) : "",
     tarehe: row.tarehe,
     kanda: row.kanda,
     mkoa: row.mkoa,
     halmashauri: row.halmashauri,
     shughuli: row.shughuli,
     aina: row.aina,
-    eneo: row.eneo,
-    mdau: row.mdau,
+    eneo: row.eneo ?? "",
+    mdau: row.mdau ?? "",
     hali: row.hali,
     vvuMe: Number(row.vvu_me),
     vvuKe: Number(row.vvu_ke),
@@ -112,28 +131,21 @@ function mapRow(row: SqlRow): Submission {
     kondomu: Number(row.kondomu),
     pep: Number(row.pep),
     jipime: Number(row.jipime),
-    ushahidi: row.ushahidi,
+    ushahidi: row.ushahidi ?? "",
     sample: row.sample === true,
   };
 }
 
 const SELECT = `
-  SELECT id, created_at, tarehe, kanda, mkoa, halmashauri, shughuli, aina,
-         eneo, mdau, hali, vvu_me, vvu_ke, maambukizi_me, maambukizi_ke,
-         waliounganishwa, elimu, kondomu, pep, jipime, ushahidi, sample
+  SELECT id, tarehe, kanda, mkoa, halmashauri, shughuli, aina, hali,
+         vvu_me, vvu_ke, maambukizi_me, maambukizi_ke, waliounganishwa,
+         elimu, kondomu, pep, jipime, sample
   FROM submissions
 `;
 
 export async function listSubmissions(): Promise<Submission[]> {
   const rows = await dbQuery<SqlRow>(`${SELECT} ORDER BY id ASC`);
   return rows.map(mapRow);
-}
-
-export async function countSamples(): Promise<number> {
-  const rows = await dbQuery<{ n: number }>(
-    "SELECT COUNT(*)::int AS n FROM submissions WHERE sample = true",
-  );
-  return Number(rows[0]?.n ?? 0);
 }
 
 export async function insertSubmission(entry: NewSubmission): Promise<Submission> {

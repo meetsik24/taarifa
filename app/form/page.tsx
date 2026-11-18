@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { EntryForm } from "@/components/EntryForm";
-import { SiteHeader } from "@/components/SiteHeader";
+import { redirect } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -11,20 +11,27 @@ export const metadata: Metadata = {
   description: "Fomu ya kushiriki taarifa ya utekelezaji wa kila siku wa WAD 2026.",
 };
 
-export default async function FormPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ m?: string | string[] }>;
-}) {
-  const params = await searchParams;
-  const marker = Array.isArray(params.m) ? params.m[0] : params.m;
+export default async function FormPage() {
   const session = await getSession();
+  if (session) redirect("/jaza");
 
   return (
     <>
-      <SiteHeader active="form" showDashboard={Boolean(session)} adminName={session?.name} />
-      <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8">
-        <EntryForm key={marker ?? "new"} />
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8">
+        <div>
+          <p className="text-sm font-medium text-primary">WAD 2026</p>
+          <h1 className="text-xl font-medium">Jaza taarifa</h1>
+        </div>
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle>Fomu inafunguliwa kwa kiungo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Omba kiungo kutoka kwa msimamizi. Kiungo hicho kinakufungulia fomu ya kujaza taarifa.
+            </p>
+          </CardContent>
+        </Card>
       </main>
     </>
   );

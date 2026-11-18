@@ -23,9 +23,9 @@ export function safeNextPath(value: string | undefined): string {
 }
 
 export async function startSession(email: string, password: string): Promise<boolean> {
-  const admin = await findAdminByEmail(email);
+  const admin = await findAdminByEmail(email.trim());
   if (!admin) return false;
-  const matches = await verifyPassword(password, admin.passwordHash);
+  const matches = await verifyPassword(password.trim(), admin.passwordHash);
   if (!matches) return false;
   const token = await signSession({ email: admin.email, name: admin.name });
   const jar = await cookies();
@@ -41,5 +41,11 @@ export async function startSession(email: string, password: string): Promise<boo
 
 export async function endSession(): Promise<void> {
   const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+  jar.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
 }

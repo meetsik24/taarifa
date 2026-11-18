@@ -5,29 +5,26 @@ import {
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
-import { logout } from "@/app/ingia/actions";
 import { AppIcon } from "@/components/app-icon";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 
 export function SiteHeader({
   active,
-  showDashboard = false,
   adminName,
 }: {
   active: "dashboard" | "form" | "login" | "admins";
-  showDashboard?: boolean;
   adminName?: string;
 }) {
   const title =
     active === "form"
-      ? "Ufuatiliaji wa kila siku"
+      ? "Kiungo cha fomu"
       : active === "login"
         ? "Ingia"
         : active === "admins"
           ? "Wasimamizi"
           : "Dashibodi ya ufuatiliaji wa Kanda / Mkoa / Halmashauri";
-  const showAdminNav = active === "dashboard" || active === "admins" || showDashboard;
+  const showAdminNav = active === "dashboard" || active === "admins" || active === "form";
 
   return (
     <header className="bg-primary text-primary-foreground">
@@ -40,6 +37,7 @@ export function SiteHeader({
           <nav className="grid grid-cols-2 gap-2 md:flex md:shrink-0" aria-label="Kurasa">
             <Link
               href="/"
+              prefetch={false}
               aria-current={active === "dashboard" ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: "ghost" }),
@@ -51,7 +49,8 @@ export function SiteHeader({
               Dashibodi
             </Link>
             <Link
-              href="/form"
+              href="/jaza"
+              prefetch={false}
               aria-current={active === "form" ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: "secondary" }),
@@ -64,6 +63,7 @@ export function SiteHeader({
             </Link>
             <Link
               href="/wasimamizi"
+              prefetch={false}
               aria-current={active === "admins" ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: "ghost" }),
@@ -74,7 +74,7 @@ export function SiteHeader({
               <AppIcon icon={UserGroupIcon} />
               Wasimamizi
             </Link>
-            <form action={logout}>
+            <form action="/toka" method="post">
               <button
                 type="submit"
                 className={cn(

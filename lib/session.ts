@@ -27,14 +27,22 @@ function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+const hmacKeys = new Map<string, Promise<CryptoKey>>();
+
 async function hmacKey(operation: "sign" | "verify"): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
+  const value = secret();
+  const cacheKey = `${operation}:${value}`;
+  const cached = hmacKeys.get(cacheKey);
+  if (cached) return cached;
+  const key = crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(secret()),
+    new TextEncoder().encode(value),
     { name: "HMAC", hash: "SHA-256" },
     false,
     [operation],
   );
+  hmacKeys.set(cacheKey, key);
+  return key;
 }
 
 export async function signSession(input: { email: string; name: string }): Promise<string> {

@@ -39,11 +39,11 @@ export function DailyTable({
               <>
                 <p className="text-base">Bado hakuna taarifa.</p>
                 <p className="text-sm text-muted-foreground">
-                  Viashiria viko sifuri mpaka taarifa ya kwanza ihifadhiwe.
+                  Viashiria viko sifuri mpaka mtu mwenye kiungo ahifadhi taarifa ya kwanza.
                 </p>
-                <Link href="/form" className={buttonVariants()}>
+                <Link href="/jaza" className={buttonVariants()}>
                   <AppIcon icon={PencilEdit02Icon} />
-                  Jaza taarifa
+                  Tengeneza kiungo
                 </Link>
               </>
             ) : (
