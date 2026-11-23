@@ -5,6 +5,7 @@ import {
   HealthIcon,
   Medicine02Icon,
   Package01Icon,
+  Link01Icon,
   PercentIcon,
   TaskDone01Icon,
   TestTube01Icon,
@@ -13,33 +14,41 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { AppIcon } from "@/components/app-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCount, formatPercent } from "@/lib/format";
+import { getCopy } from "@/lib/locale";
+import type { Copy } from "@/lib/messages";
 import type { Metrics } from "@/lib/types";
 
+type KpiKey = Exclude<keyof Copy["kpis"], "title" | "subtitle">;
+
 const ITEMS: Array<{
-  key: keyof Metrics;
-  label: string;
+  key: KpiKey;
   kind: "count" | "percent";
   icon: IconSvgElement;
 }> = [
-  { key: "planned", label: "Shughuli zilizopangwa", kind: "count", icon: ClipboardIcon },
-  { key: "completed", label: "Shughuli zilizokamilika", kind: "count", icon: TaskDone01Icon },
-  { key: "ongoing", label: "Shughuli zinazoendelea", kind: "count", icon: Activity02Icon },
-  { key: "completionRatio", label: "Asilimia ya kukamilika", kind: "percent", icon: PercentIcon },
-  { key: "tested", label: "Waliopima VVU", kind: "count", icon: TestTube01Icon },
-  { key: "positive", label: "Waliokutwa na Maambukizi ya VVU", kind: "count", icon: HealthIcon },
-  { key: "educated", label: "Waliofikiwa na Elimu", kind: "count", icon: BookOpen01Icon },
-  { key: "condoms", label: "Kondomu zilizogawanywa", kind: "count", icon: Package01Icon },
-  { key: "pep", label: "Dawa Kinga/PEP/PrEP zilizogawanywa", kind: "count", icon: Medicine02Icon },
+  { key: "planned", kind: "count", icon: ClipboardIcon },
+  { key: "completed", kind: "count", icon: TaskDone01Icon },
+  { key: "ongoing", kind: "count", icon: Activity02Icon },
+  { key: "completionRatio", kind: "percent", icon: PercentIcon },
+  { key: "tested", kind: "count", icon: TestTube01Icon },
+  { key: "positive", kind: "count", icon: HealthIcon },
+  { key: "educated", kind: "count", icon: BookOpen01Icon },
+  { key: "condoms", kind: "count", icon: Package01Icon },
+  { key: "pep", kind: "count", icon: Medicine02Icon },
+  { key: "selfTests", kind: "count", icon: TestTube01Icon },
+  { key: "positivity", kind: "percent", icon: PercentIcon },
+  { key: "linked", kind: "count", icon: Link01Icon },
+  { key: "linkageRatio", kind: "percent", icon: PercentIcon },
 ];
 
-export function KpiGrid({ metrics }: { metrics: Metrics }) {
+export async function KpiGrid({ metrics }: { metrics: Metrics }) {
+  const t = await getCopy();
   return (
     <section aria-labelledby="viashiria-title" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 id="viashiria-title" className="text-base font-medium">
-          Viashiria
+          {t.kpis.title}
         </h2>
-        <p className="text-sm text-muted-foreground">Hali ya utekelezaji</p>
+        <p className="text-sm text-muted-foreground">{t.kpis.subtitle}</p>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {ITEMS.map((item) => {
@@ -52,7 +61,7 @@ export function KpiGrid({ metrics }: { metrics: Metrics }) {
               <CardContent className="flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="min-h-10 text-sm leading-5 font-medium text-muted-foreground">
-                    {item.label}
+                    {t.kpis[item.key]}
                   </h3>
                   <span
                     className={
@@ -69,7 +78,7 @@ export function KpiGrid({ metrics }: { metrics: Metrics }) {
                   <div
                     className="h-2 overflow-hidden rounded bg-secondary"
                     role="img"
-                    aria-label={`${value} ya shughuli zilizopangwa zimekamilika`}
+                    aria-label={`${t.kpis[item.key]}: ${value}`}
                   >
                     <span className="block h-full rounded bg-primary" style={{ width: `${width}%` }} />
                   </div>

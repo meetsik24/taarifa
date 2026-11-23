@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   halmashauri text NOT NULL,
   shughuli text NOT NULL,
   aina text NOT NULL,
+  nyingine text NOT NULL DEFAULT '',
   eneo text NOT NULL DEFAULT '',
   mdau text NOT NULL DEFAULT '',
   hali text NOT NULL,
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS admins (
   name text NOT NULL,
   email text NOT NULL UNIQUE,
   password_hash text NOT NULL,
+  role text NOT NULL DEFAULT 'admin',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -37,5 +39,6 @@ CREATE TABLE IF NOT EXISTS form_links (
   label text NOT NULL DEFAULT '',
   created_by text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz
+  revoked_at timestamptz,
+  passkey text NOT NULL DEFAULT ''
 );

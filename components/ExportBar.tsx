@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pdf01Icon, Xls01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/app-icon";
+import { useLocale, useCopy } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import type { ChartSeries } from "@/lib/charts";
 import type { Filters, Metrics, Submission } from "@/lib/types";
@@ -18,6 +19,8 @@ export function ExportBar({
   charts: ChartSeries;
   filters: Filters;
 }) {
+  const locale = useLocale();
+  const t = useCopy();
   const [busy, setBusy] = useState<"pdf" | "excel" | null>(null);
   const [error, setError] = useState("");
 
@@ -27,14 +30,14 @@ export function ExportBar({
     try {
       if (kind === "excel") {
         const { downloadExcel } = await import("@/lib/export-excel");
-        await downloadExcel({ rows, metrics, charts, filters });
+        await downloadExcel({ rows, metrics, charts, filters, locale });
       } else {
         const { downloadPdf } = await import("@/lib/export-pdf");
-        downloadPdf({ rows, metrics, charts, filters });
+        await downloadPdf({ rows, metrics, charts, filters, locale });
       }
     } catch (cause) {
       console.error(cause);
-      setError("Imeshindikana kupakua. Jaribu tena.");
+      setError(t.export.failed);
     } finally {
       setBusy(null);
     }
@@ -42,9 +45,7 @@ export function ExportBar({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
-        Pakua taarifa zinazoonekana sasa. PDF ina viashiria, chati, na jedwali lote.
-      </p>
+      <p className="text-sm text-muted-foreground">{t.export.hint}</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         {error ? <p className="text-sm font-medium text-destructive">{error}</p> : null}
         <Button
@@ -54,11 +55,11 @@ export function ExportBar({
           onClick={() => run("excel")}
         >
           <AppIcon icon={Xls01Icon} />
-          {busy === "excel" ? "Inatayarisha…" : "Pakua Excel"}
+          {busy === "excel" ? t.export.preparing : t.export.excel}
         </Button>
         <Button type="button" disabled={busy !== null} onClick={() => run("pdf")}>
           <AppIcon icon={Pdf01Icon} />
-          {busy === "pdf" ? "Inatayarisha…" : "Pakua PDF"}
+          {busy === "pdf" ? t.export.preparing : t.export.pdf}
         </Button>
       </div>
     </div>

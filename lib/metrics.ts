@@ -1,3 +1,4 @@
+import { activityTypesIn, type ActivityType } from "./options";
 import type { Filters, Metrics, Submission } from "./types";
 
 /**
@@ -8,7 +9,8 @@ import type { Filters, Metrics, Submission } from "./types";
  * - Asilimia ya kukamilika = IFERROR(completed / planned, 0)
  * - Waliopima VVU = sum of (Me + Ke) tested
  * - Waliokutwa na Maambukizi ya VVU = sum of (Me + Ke) positive
- * - Waliofikiwa na Elimu, Kondomu, PEP/PrEP = column sums
+ * - Waliofikiwa na Elimu, Kondomu, PEP/PrEP, Jipime = column sums
+ * - Waliounganishwa = column sum
  * The sheet's own Jumla cells are not used; Jumla is Me + Ke.
  * Haijaanza and Imesitishwa stay in the planned count only.
  */
@@ -21,6 +23,8 @@ export function computeMetrics(rows: Submission[]): Metrics {
   let educated = 0;
   let condoms = 0;
   let pep = 0;
+  let selfTests = 0;
+  let linked = 0;
 
   for (const row of rows) {
     if (row.shughuli.trim() !== "") planned += 1;
@@ -31,6 +35,8 @@ export function computeMetrics(rows: Submission[]): Metrics {
     educated += row.elimu;
     condoms += row.kondomu;
     pep += row.pep;
+    selfTests += row.jipime;
+    linked += row.waliounganishwa;
   }
 
   return {
@@ -43,6 +49,10 @@ export function computeMetrics(rows: Submission[]): Metrics {
     educated,
     condoms,
     pep,
+    selfTests,
+    linked,
+    positivity: tested === 0 ? 0 : positive / tested,
+    linkageRatio: positive === 0 ? 0 : linked / positive,
     rows: rows.length,
   };
 }
@@ -61,31 +71,10 @@ export function applyFilters(rows: Submission[], filters: Filters): Submission[]
     if (halmashauri && row.halmashauri.trim().toLowerCase() !== halmashauri) {
       return false;
     }
-    if (aina && row.aina !== aina) return false;
+    if (aina && !activityTypesIn(row.aina).includes(aina as ActivityType)) return false;
     if (kuanzia && row.tarehe < kuanzia) return false;
     if (hadi && row.tarehe > hadi) return false;
     return true;
   });
 }
 
-export function distinctPlaces(rows: Submission[]): {
-  kanda: string[];
-  mkoa: string[];
-  halmashauri: string[];
-} {
-  const kanda = new Set<string>();
-  const mkoa = new Set<string>();
-  const halmashauri = new Set<string>();
-  for (const row of rows) {
-    if (row.kanda.trim()) kanda.add(row.kanda.trim());
-    if (row.mkoa.trim()) mkoa.add(row.mkoa.trim());
-    if (row.halmashauri.trim()) halmashauri.add(row.halmashauri.trim());
-  }
-  const sort = (values: Set<string>) =>
-    [...values].sort((a, b) => a.localeCompare(b, "sw"));
-  return {
-    kanda: sort(kanda),
-    mkoa: sort(mkoa),
-    halmashauri: sort(halmashauri),
-  };
-}

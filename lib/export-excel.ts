@@ -1,4 +1,4 @@
-import { formatPercent } from "./format";
+import type { ChartSeries } from "./charts";
 import {
   KPI_ITEMS,
   describeFilters,
@@ -7,7 +7,8 @@ import {
   placeChartTitle,
   toReportRows,
 } from "./export-report";
-import type { ChartSeries } from "./charts";
+import { formatPercent } from "./format";
+import { copy, translateTerm, type Locale } from "./messages";
 import type { Filters, Metrics, Submission } from "./types";
 
 type WorkbookModule = {
@@ -33,41 +34,62 @@ export async function downloadExcel(input: {
   metrics: Metrics;
   charts: ChartSeries;
   filters: Filters;
+  locale?: Locale;
 }): Promise<void> {
+  const locale = input.locale ?? "sw";
+  const t = copy[locale];
   const loaded = (await import("xlsx")) as WorkbookModule & { default?: WorkbookModule };
   const XLSX = workbookApi(loaded);
-  const scope = describeFilters(input.filters);
-  const reportRows = toReportRows(input.rows);
+  const scope = describeFilters(input.filters, locale);
+  const reportRows = toReportRows(input.rows, locale);
   const book = XLSX.utils.book_new();
 
   const indicators: unknown[][] = [
     ["WAD 2026"],
-    ["Dashibodi ya ufuatiliaji"],
-    ["Kichujio", scope],
-    ["Idadi ya taarifa", input.rows.length],
+    [t.export.dashboard],
+    [t.export.filter, scope],
+    [t.export.rowCount, input.rows.length],
     [],
-    ["Kiashiria", "Thamani"],
-    ...KPI_ITEMS.map((item) => [item.label, metricValue(input.metrics, item.key, item.kind)]),
+    [t.export.indicator, t.export.value],
+    ...KPI_ITEMS.map((item) => [
+      t.kpis[item.key as Exclude<keyof typeof t.kpis, "title" | "subtitle">],
+      metricValue(input.metrics, item.key, item.kind),
+    ]),
   ];
 
   const charts: unknown[][] = [
-    ["Sehemu", "Kipengele", "Thamani", "Thamani ya pili"],
-    ...input.charts.status.map((item) => ["Hali ya shughuli", item.label, item.count, ""]),
-    ...input.charts.gender.map((item) => ["Upimaji na maambukizi kwa jinsia", item.label, item.me, item.ke]),
+    [t.export.section, t.export.item, t.export.value, t.export.secondValue],
+    ...input.charts.status.map((item) => [t.charts.statusTitle, translateTerm(locale, item.label), item.count, ""]),
+    ...input.charts.gender.map((item) => [
+      t.charts.genderTitle,
+      translateTerm(locale, item.label),
+      item.me,
+      item.ke,
+    ]),
     ...input.charts.days.map((item) => [
-      "Mwenendo wa upimaji na maambukizi",
-      item.date || "Bila tarehe",
+      t.charts.trendTitle,
+      item.date || t.charts.undated,
       item.tested,
       item.positive,
     ]),
     ...input.charts.places.map((item) => [
-      placeChartTitle(input.charts),
-      item.label,
+      placeChartTitle(input.charts, locale),
+      translateTerm(locale, item.label),
       input.charts.placeValue === "tested" ? item.tested : item.activities,
       item.positive,
     ]),
-    ...input.charts.activities.map((item) => ["Aina ya shughuli", item.label, item.count, ""]),
-    ...input.charts.supplies.map((item) => ["Vifaa vilivyogawanywa", item.label, item.value, ""]),
+    ...input.charts.activities.map((item) => [
+      t.charts.activityTitle,
+      translateTerm(locale, item.label),
+      item.count,
+      "",
+    ]),
+    ...input.charts.supplies.map((item) => [
+      t.charts.suppliesTitle,
+      translateTerm(locale, item.label),
+      item.value,
+      "",
+    ]),
   ];
 
   const totals = reportRows.reduce(
@@ -101,29 +123,29 @@ export async function downloadExcel(input: {
 
   const table: unknown[][] = [
     [
-      "Na.",
-      "Tarehe",
-      "Kanda",
-      "Mkoa",
-      "Halmashauri",
-      "Shughuli iliyopangwa",
-      "Aina ya shughuli",
-      "Hali ya utekelezaji",
-      "Eneo / kundi lengwa",
-      "Mhusika / mdau",
-      "VVU Me",
-      "VVU Ke",
-      "VVU Jumla",
-      "Maambukizi Me",
-      "Maambukizi Ke",
-      "Maambukizi Jumla",
-      "Waliounganishwa",
-      "Waliofikiwa elimu",
-      "Kondomu",
+      t.words.number,
+      t.fields.date,
+      t.fields.zone,
+      t.fields.region,
+      t.fields.council,
+      t.fields.activity,
+      t.fields.activityType,
+      t.fields.status,
+      t.fields.area,
+      t.fields.actor,
+      t.export.testedMale,
+      t.export.testedFemale,
+      t.export.testedTotal,
+      t.export.positiveMale,
+      t.export.positiveFemale,
+      t.export.positiveTotal,
+      t.fields.linked,
+      t.fields.educated,
+      t.table.condoms,
       "PEP/PrEP",
-      "Jipime",
-      "Ushahidi / rejea",
-      "Sampuli",
+      t.export.selfTest,
+      t.fields.evidence,
+      t.export.sample,
     ],
     ...reportRows.map((row) => [
       row.na,
@@ -156,7 +178,7 @@ export async function downloadExcel(input: {
       "",
       "",
       "",
-      "Jumla",
+      t.words.total,
       "",
       "",
       "",
@@ -177,9 +199,9 @@ export async function downloadExcel(input: {
     ],
   ];
 
-  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(indicators), "Viashiria");
-  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(charts), "Chati");
-  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(table), "Taarifa");
+  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(indicators), t.export.sheetIndicators);
+  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(charts), t.export.sheetCharts);
+  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(table), t.export.sheetReports);
 
   const bytes = XLSX.write(book, { bookType: "xlsx", type: "array" });
   downloadBlob(

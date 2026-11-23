@@ -1,4 +1,4 @@
-import { STATUSES } from "./options";
+import { activityTypesIn, STATUSES } from "./options";
 import type { Submission } from "./types";
 
 /** How many place names to draw before folding the rest into "Nyingine". */
@@ -148,7 +148,11 @@ function placeSeries(rows: Submission[], grain: PlaceGrain): {
 
 function activitySeries(rows: Submission[]): ActivityPoint[] {
   const counts = new Map<string, number>();
-  for (const row of rows) add(counts, row.aina.trim() || "Haijatajwa", 1);
+  for (const row of rows) {
+    const types = activityTypesIn(row.aina);
+    if (types.length === 0) add(counts, "Haijatajwa", 1);
+    for (const type of types) add(counts, type, 1);
+  }
   return [...counts.entries()]
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "sw"));

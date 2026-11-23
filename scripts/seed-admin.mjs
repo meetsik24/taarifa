@@ -37,13 +37,15 @@ try {
       name text NOT NULL,
       email text NOT NULL UNIQUE,
       password_hash text NOT NULL,
+      role text NOT NULL DEFAULT 'super_admin',
       created_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await pool.query("ALTER TABLE admins ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'admin'");
   const existing = await pool.query("SELECT id FROM admins WHERE email = $1", [email.toLowerCase()]);
   if (existing.rowCount === 0) {
     await pool.query(
-      "INSERT INTO admins (name, email, password_hash) VALUES ($1, $2, $3)",
+      "INSERT INTO admins (name, email, password_hash, role) VALUES ($1, $2, $3, 'super_admin')",
       [name, email.toLowerCase(), passwordHash],
     );
     console.log("CREATED");

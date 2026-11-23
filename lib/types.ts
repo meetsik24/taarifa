@@ -1,4 +1,4 @@
-import type { ActivityType, Status } from "./options";
+import type { Status } from "./options";
 
 export type Submission = {
   id: number;
@@ -8,7 +8,9 @@ export type Submission = {
   mkoa: string;
   halmashauri: string;
   shughuli: string;
-  aina: ActivityType;
+  aina: string;
+  /** What the person wrote when they ticked Huduma nyingine. Empty otherwise. */
+  nyingine: string;
   eneo: string;
   mdau: string;
   hali: Status;
@@ -47,6 +49,12 @@ export type Metrics = {
   educated: number;
   condoms: number;
   pep: number;
+  selfTests: number;
+  linked: number;
+  /** Positive / tested. 0 when nobody was tested. */
+  positivity: number;
+  /** Linked to care / positive. 0 when nobody was positive. */
+  linkageRatio: number;
   rows: number;
 };
 

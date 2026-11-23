@@ -15,30 +15,26 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useCopy, useLocale } from "@/components/language-provider";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { ChartSeries, PlaceGrain } from "@/lib/charts";
+import type { ChartSeries } from "@/lib/charts";
 import { formatCount, formatDate, formatPercent } from "@/lib/format";
+import { fill, translateTerm } from "@/lib/messages";
 
-const TESTED = "#0d5c4d";
-const TESTED_SOFT = "#3d7a68";
-const POSITIVE = "#8d2b2b";
-const MUTED = "#52645c";
-const INK = "#14221c";
-const GRID = "#d3dfd8";
+const TESTED = "#c5168c";
+const TESTED_SOFT = "#04adee";
+const POSITIVE = "#eb1c20";
+const MUTED = "#5c4654";
+const INK = "#1a1218";
+const GRID = "#eadde4";
 const ME = TESTED;
-const KE = INK;
+const KE = TESTED_SOFT;
 
 const STATUS_COLOR: Record<string, string> = {
   Imekamilika: TESTED,
   Inaendelea: TESTED_SOFT,
   Haijaanza: MUTED,
   Imesitishwa: POSITIVE,
-};
-
-const PLACE_NAME: Record<PlaceGrain, string> = {
-  kanda: "kanda",
-  mkoa: "mkoa",
-  halmashauri: "halmashauri",
 };
 
 type TipItem = {
@@ -194,29 +190,42 @@ const axisTick = { fill: MUTED, fontSize: 12 };
 
 export function DashboardCharts({ series }: { series: ChartSeries }) {
   const reduceMotion = useReduceMotion();
+  const t = useCopy();
+  const locale = useLocale();
   if (series.total === 0) return null;
 
-  const slices = series.status.filter((item) => item.count > 0);
-  const placeNoun = PLACE_NAME[series.placeGrain];
-  const placeTitle =
-    series.placeValue === "tested" ? `Waliopima kwa ${placeNoun}` : `Shughuli kwa ${placeNoun}`;
+  const slices = series.status
+    .filter((item) => item.count > 0)
+    .map((item) => ({ ...item, name: translateTerm(locale, item.label) }));
+  const placeNoun = t.places[series.placeGrain];
+  const placeTitle = fill(
+    series.placeValue === "tested" ? t.charts.testedBy : t.charts.activitiesBy,
+    { place: placeNoun },
+  );
   const placeKey = series.placeValue === "tested" ? "tested" : "activities";
   const placeDescription = series.placesTruncated
-    ? `Maeneo 8 ya juu. Mengine yamejumuishwa kwenye Nyingine.`
-    : `Kila ${placeNoun} iliyo kwenye taarifa hizi.`;
+    ? t.charts.topPlaces
+    : fill(t.charts.eachPlace, { place: placeNoun });
+  const gender = series.gender.map((item) => ({ ...item, label: translateTerm(locale, item.label) }));
+  const places = series.places.map((item) => ({ ...item, label: translateTerm(locale, item.label) }));
+  const activities = series.activities.map((item) => ({
+    label: translateTerm(locale, item.label),
+    value: item.count,
+  }));
+  const supplies = series.supplies.map((item) => ({ ...item, label: translateTerm(locale, item.label) }));
 
   return (
     <section aria-labelledby="michoro-title" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 id="michoro-title" className="text-base font-medium">
-          Michoro
+          {t.charts.title}
         </h2>
-        <p className="text-sm text-muted-foreground">Zinafuata vichujio vilivyochaguliwa.</p>
+        <p className="text-sm text-muted-foreground">{t.charts.subtitle}</p>
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <ChartCard
-          title="Hali ya shughuli"
-          description="Mgawanyo wa taarifa kwa hali ya utekelezaji."
+          title={t.charts.statusTitle}
+          description={t.charts.statusDescription}
         >
           <div className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
             <div className="relative h-56">
@@ -226,7 +235,7 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
                     <Pie
                       data={slices}
                       dataKey="count"
-                      nameKey="label"
+                      nameKey="name"
                       innerRadius="62%"
                       outerRadius="88%"
                       paddingAngle={slices.length > 1 ? 2 : 0}
@@ -248,7 +257,7 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
                   <p className="text-[28px] leading-8 font-medium text-foreground tabular-nums">
                     {formatCount(series.total)}
                   </p>
-                  <p className="text-xs text-muted-foreground">shughuli</p>
+                  <p className="text-xs text-muted-foreground">{t.charts.activities}</p>
                 </div>
               </div>
             </div>
@@ -260,7 +269,7 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
                       className="size-2.5 shrink-0 rounded-sm"
                       style={{ background: statusColor(item.label) }}
                     />
-                    {item.label}
+                    {translateTerm(locale, item.label)}
                   </span>
                   <span className="font-medium tabular-nums">{formatCount(item.count)}</span>
                 </li>
@@ -270,11 +279,11 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
         </ChartCard>
 
         <ChartCard
-          title="Upimaji na maambukizi kwa jinsia"
-          description="Me na Ke. Jumla ni Me + Ke, kama kwenye jedwali."
+          title={t.charts.genderTitle}
+          description={t.charts.genderDescription}
         >
           <Frame height={224}>
-            <BarChart data={series.gender} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+            <BarChart data={gender} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={GRID} />
               <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} />
               <YAxis
@@ -284,56 +293,64 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
                 width={44}
                 allowDecimals={false}
               />
-              <Tooltip content={<ChartTip />} cursor={{ fill: "#eef3f0" }} wrapperStyle={{ zIndex: 20, outline: "none" }} />
-              <Bar dataKey="me" name="Me" fill={ME} radius={[4, 4, 0, 0]} maxBarSize={36} isAnimationActive={!reduceMotion} />
-              <Bar dataKey="ke" name="Ke" fill={KE} radius={[4, 4, 0, 0]} maxBarSize={36} isAnimationActive={!reduceMotion} />
+              <Tooltip content={<ChartTip />} cursor={{ fill: "#f3e8ee" }} wrapperStyle={{ zIndex: 20, outline: "none" }} />
+              <Bar dataKey="me" name={t.words.me} fill={ME} radius={[4, 4, 0, 0]} maxBarSize={36} isAnimationActive={!reduceMotion} />
+              <Bar dataKey="ke" name={t.words.ke} fill={KE} radius={[4, 4, 0, 0]} maxBarSize={36} isAnimationActive={!reduceMotion} />
             </BarChart>
           </Frame>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <li className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm" style={{ background: ME }} />
-              Me
+              {t.words.me}
             </li>
             <li className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm" style={{ background: KE }} />
-              Ke
+              {t.words.ke}
             </li>
           </ul>
           <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
-            {series.gender.map((item) => (
+            {gender.map((item) => (
               <div key={item.label}>
                 <dt className="text-muted-foreground">{item.label}</dt>
                 <dd className="mt-1 font-medium tabular-nums">
-                  Me {formatCount(item.me)} · Ke {formatCount(item.ke)}
+                  {fill(t.charts.sexLine, {
+                    me: t.words.me,
+                    meCount: formatCount(item.me),
+                    ke: t.words.ke,
+                    keCount: formatCount(item.ke),
+                  })}
                 </dd>
               </div>
             ))}
           </dl>
           <p className="text-sm text-muted-foreground">
             {series.tested === 0
-              ? "Bado hakuna waliopima, hivyo kiwango cha maambukizi hakijahesabiwa."
-              : `Kiwango cha maambukizi: ${formatPercent(series.positivity)} ya waliopima. Waliounganishwa na huduma: ${formatCount(series.linked)}.`}
+              ? t.charts.noTested
+              : fill(t.charts.positivity, {
+                  rate: formatPercent(series.positivity),
+                  linked: formatCount(series.linked),
+                })}
           </p>
         </ChartCard>
 
         <ChartCard
           className="lg:col-span-2"
-          title="Mwenendo wa upimaji na maambukizi"
-          description="Jumla ya kila siku. Siku bila taarifa hazionyeshwi."
+          title={t.charts.trendTitle}
+          description={t.charts.trendDescription}
         >
           <table className="sr-only">
-            <caption>Waliopima na waliokutwa na maambukizi kwa kila siku</caption>
+            <caption>{t.charts.trendCaption}</caption>
             <thead>
               <tr>
-                <th>Siku</th>
-                <th>Waliopima</th>
-                <th>Maambukizi</th>
+                <th>{t.words.day}</th>
+                <th>{t.charts.tested}</th>
+                <th>{t.charts.infections}</th>
               </tr>
             </thead>
             <tbody>
               {series.days.map((day) => (
-                <tr key={day.date || "bila-tarehe"}>
-                  <td>{day.date ? formatDate(day.date) : "Bila tarehe"}</td>
+                <tr key={day.date || "undated"}>
+                  <td>{day.date ? formatDate(day.date) : t.charts.undated}</td>
                   <td>{formatCount(day.tested)}</td>
                   <td>{formatCount(day.positive)}</td>
                 </tr>
@@ -363,7 +380,7 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
                 <Area
                   type="monotone"
                   dataKey="tested"
-                  name="Waliopima"
+                  name={t.charts.tested}
                   stroke={TESTED}
                   fill={TESTED}
                   fillOpacity={0.16}
@@ -374,7 +391,7 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
                 <Area
                   type="monotone"
                   dataKey="positive"
-                  name="Maambukizi"
+                  name={t.charts.infections}
                   stroke={POSITIVE}
                   fill={POSITIVE}
                   fillOpacity={0.12}
@@ -388,38 +405,38 @@ export function DashboardCharts({ series }: { series: ChartSeries }) {
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <li className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm" style={{ background: TESTED }} />
-              Waliopima
+              {t.charts.tested}
             </li>
             <li className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm" style={{ background: POSITIVE }} />
-              Maambukizi
+              {t.charts.infections}
             </li>
           </ul>
         </ChartCard>
 
         <ChartCard title={placeTitle} description={placeDescription}>
           <PlaceBars
-            rows={series.places}
+            rows={places}
             dataKey={placeKey}
-            name={series.placeValue === "tested" ? "Waliopima" : "Shughuli"}
+            name={series.placeValue === "tested" ? t.charts.tested : t.charts.activitiesWord}
             reduceMotion={reduceMotion}
           />
         </ChartCard>
 
-        <ChartCard title="Aina ya shughuli" description="Idadi ya taarifa kwa kila aina.">
+        <ChartCard title={t.charts.activityTitle} description={t.charts.activityDescription}>
           <NamedBars
-            rows={series.activities.map((item) => ({ label: item.label, value: item.count }))}
-            name="Taarifa"
+            rows={activities}
+            name={t.charts.reports}
             reduceMotion={reduceMotion}
           />
         </ChartCard>
 
         <ChartCard
           className="lg:col-span-2"
-          title="Vifaa vilivyogawanywa"
-          description="Urefu wa kila mstari unafuata idadi kubwa zaidi kati ya vifaa hivi."
+          title={t.charts.suppliesTitle}
+          description={t.charts.suppliesDescription}
         >
-          <SupplyBars supplies={series.supplies} />
+          <SupplyBars supplies={supplies} />
         </ChartCard>
       </div>
     </section>
@@ -455,6 +472,7 @@ function NamedBars({
   name: string;
   reduceMotion: boolean;
 }) {
+  const t = useCopy();
   const labels = rows.map((row) => row.label);
   const wraps = labels.some((label) => {
     const lead = sharedLead(labels);
@@ -468,7 +486,7 @@ function NamedBars({
         <caption>{name}</caption>
         <thead>
           <tr>
-            <th>Jina</th>
+            <th>{t.words.name}</th>
             <th>{name}</th>
           </tr>
         </thead>
@@ -498,7 +516,7 @@ function NamedBars({
               axisLine={false}
               tickLine={false}
             />
-            <Tooltip content={<ChartTip />} cursor={{ fill: "#eef3f0" }} wrapperStyle={{ zIndex: 20, outline: "none" }} />
+            <Tooltip content={<ChartTip />} cursor={{ fill: "#f3e8ee" }} wrapperStyle={{ zIndex: 20, outline: "none" }} />
             <Bar
               dataKey="value"
               name={name}

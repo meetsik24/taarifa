@@ -11,6 +11,7 @@ type SqlRow = {
   halmashauri: string;
   shughuli: string;
   aina: Submission["aina"];
+  nyingine?: string;
   eneo?: string;
   mdau?: string;
   hali: Submission["hali"];
@@ -105,6 +106,24 @@ export async function dbQuery<T extends QueryResultRow>(
   }
 }
 
+const EXTRA_COLUMNS = [
+  "ALTER TABLE submissions ADD COLUMN IF NOT EXISTS nyingine text NOT NULL DEFAULT ''",
+];
+
+let extraReady: Promise<void> | null = null;
+
+function ensureExtraColumns(): Promise<void> {
+  extraReady ??= (async () => {
+    for (const statement of EXTRA_COLUMNS) {
+      await dbQuery(statement);
+    }
+  })().catch((error: unknown) => {
+    extraReady = null;
+    throw error;
+  });
+  return extraReady;
+}
+
 function asIsoTimestamp(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;
 }
@@ -119,6 +138,7 @@ function mapRow(row: SqlRow): Submission {
     halmashauri: row.halmashauri,
     shughuli: row.shughuli,
     aina: row.aina,
+    nyingine: row.nyingine ?? "",
     eneo: row.eneo ?? "",
     mdau: row.mdau ?? "",
     hali: row.hali,
@@ -137,28 +157,30 @@ function mapRow(row: SqlRow): Submission {
 }
 
 const SELECT = `
-  SELECT id, tarehe, kanda, mkoa, halmashauri, shughuli, aina, hali,
+  SELECT id, tarehe, kanda, mkoa, halmashauri, shughuli, aina, nyingine, eneo, mdau, hali,
          vvu_me, vvu_ke, maambukizi_me, maambukizi_ke, waliounganishwa,
-         elimu, kondomu, pep, jipime, sample
+         elimu, kondomu, pep, jipime, ushahidi, sample
   FROM submissions
 `;
 
 export async function listSubmissions(): Promise<Submission[]> {
+  await ensureExtraColumns();
   const rows = await dbQuery<SqlRow>(`${SELECT} ORDER BY id ASC`);
   return rows.map(mapRow);
 }
 
 export async function insertSubmission(entry: NewSubmission): Promise<Submission> {
+  await ensureExtraColumns();
   const rows = await dbQuery<SqlRow>(
     `INSERT INTO submissions (
-      created_at, tarehe, kanda, mkoa, halmashauri, shughuli, aina, eneo, mdau, hali,
+      created_at, tarehe, kanda, mkoa, halmashauri, shughuli, aina, nyingine, eneo, mdau, hali,
       vvu_me, vvu_ke, maambukizi_me, maambukizi_ke, waliounganishwa, elimu, kondomu,
       pep, jipime, ushahidi, sample
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
     )
-    RETURNING id, created_at, tarehe, kanda, mkoa, halmashauri, shughuli, aina,
+    RETURNING id, created_at, tarehe, kanda, mkoa, halmashauri, shughuli, aina, nyingine,
               eneo, mdau, hali, vvu_me, vvu_ke, maambukizi_me, maambukizi_ke,
               waliounganishwa, elimu, kondomu, pep, jipime, ushahidi, sample`,
     [
@@ -169,6 +191,7 @@ export async function insertSubmission(entry: NewSubmission): Promise<Submission
       entry.halmashauri,
       entry.shughuli,
       entry.aina,
+      entry.nyingine,
       entry.eneo,
       entry.mdau,
       entry.hali,

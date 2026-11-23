@@ -394,3 +394,29 @@ export function councilsFor(mkoa: string): string[] {
 export function isHalmashauriOf(mkoa: string, halmashauri: string): boolean {
   return councilsFor(mkoa).includes(halmashauri);
 }
+
+export function regionsForZone(kanda: string): string[] {
+  if (kanda && isKanda(kanda)) return mikoaFor(kanda);
+  return ZONES.flatMap((zone) => zone.mikoa.map((place) => place.mkoa));
+}
+
+export function councilsForSelection(kanda: string, mkoa: string): string[] {
+  if (mkoa && isMkoa(mkoa) && (!kanda || isMkoaOf(kanda, mkoa))) return councilsFor(mkoa);
+  if (kanda && isKanda(kanda)) {
+    return zoneByName.get(kanda)?.mikoa.flatMap((place) => place.halmashauri) ?? [];
+  }
+  return ZONES.flatMap((zone) => zone.mikoa.flatMap((place) => place.halmashauri));
+}
+
+/** Drop a region or council that does not belong to the level selected above it. */
+export function alignPlaceFilters(
+  kanda: string,
+  mkoa: string,
+  halmashauri: string,
+): { kanda: string; mkoa: string; halmashauri: string } {
+  const zone = isKanda(kanda) ? kanda : "";
+  const region = mkoa && regionsForZone(zone).includes(mkoa) ? mkoa : "";
+  const council =
+    halmashauri && councilsForSelection(zone, region).includes(halmashauri) ? halmashauri : "";
+  return { kanda: zone, mkoa: region, halmashauri: council };
+}

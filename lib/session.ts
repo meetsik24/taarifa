@@ -1,9 +1,14 @@
+import { isRole, type Role } from "@/lib/roles";
+
 export const SESSION_COOKIE = "wad_session";
+export const FORM_ACCESS_COOKIE = "fomu_access";
 const SESSION_SECONDS = 60 * 60 * 12;
+const FORM_ACCESS_SECONDS = 60 * 60 * 24 * 7;
 
 export type SessionPayload = {
   email: string;
   name: string;
+  role: Role;
   exp: number;
 };
 
@@ -45,10 +50,11 @@ async function hmacKey(operation: "sign" | "verify"): Promise<CryptoKey> {
   return key;
 }
 
-export async function signSession(input: { email: string; name: string }): Promise<string> {
+export async function signSession(input: { email: string; name: string; role: Role }): Promise<string> {
   const payload: SessionPayload = {
     email: input.email,
     name: input.name,
+    role: input.role,
     exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS,
   };
   const body = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
@@ -58,6 +64,45 @@ export async function signSession(input: { email: string; name: string }): Promi
     new TextEncoder().encode(body),
   );
   return `${body}.${bytesToBase64Url(new Uint8Array(signature))}`;
+}
+
+type FormAccessPayload = {
+  token: string;
+  exp: number;
+};
+
+export async function signFormAccess(token: string): Promise<string> {
+  const payload: FormAccessPayload = {
+    token,
+    exp: Math.floor(Date.now() / 1000) + FORM_ACCESS_SECONDS,
+  };
+  const body = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    await hmacKey("sign"),
+    new TextEncoder().encode(body),
+  );
+  return `${body}.${bytesToBase64Url(new Uint8Array(signature))}`;
+}
+
+export async function readFormAccess(value: string | undefined): Promise<string | null> {
+  if (!value || !process.env.AUTH_SECRET?.trim()) return null;
+  const [body, signature] = value.split(".");
+  if (!body || !signature || value.split(".").length !== 2) return null;
+  try {
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      await hmacKey("verify"),
+      base64UrlToBytes(signature),
+      new TextEncoder().encode(body),
+    );
+    if (!valid) return null;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(body))) as FormAccessPayload;
+    if (!payload.token || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    return payload.token;
+  } catch {
+    return null;
+  }
 }
 
 export async function readSession(token: string | undefined): Promise<SessionPayload | null> {
@@ -73,7 +118,9 @@ export async function readSession(token: string | undefined): Promise<SessionPay
     );
     if (!valid) return null;
     const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(body))) as SessionPayload;
-    if (!payload.email || !payload.name || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (!payload.email || !payload.name || !isRole(payload.role) || payload.exp <= Math.floor(Date.now() / 1000)) {
+      return null;
+    }
     return payload;
   } catch {
     return null;

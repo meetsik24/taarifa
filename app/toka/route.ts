@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
-import { endSession } from "@/lib/auth";
+import { requestOrigin } from "@/lib/public-origin";
+import { SESSION_COOKIE } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request): Promise<NextResponse> {
-  await endSession();
-  return NextResponse.redirect(new URL("/ingia", request.url), 303);
+  const origin = requestOrigin(request);
+  const response = NextResponse.redirect(new URL("/ingia", origin), 303);
+  response.cookies.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: origin.startsWith("https://"),
+    path: "/",
+    maxAge: 0,
+  });
+  return response;
 }

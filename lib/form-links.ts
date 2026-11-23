@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { dbQuery } from "./db";
 
 export type FormLink = {
@@ -8,6 +8,7 @@ export type FormLink = {
   createdBy: string;
   createdAt: string;
   revokedAt: string | null;
+  passkey: string;
 };
 
 type SqlRow = {
@@ -17,6 +18,7 @@ type SqlRow = {
   created_by: string;
   created_at: Date | string;
   revoked_at: Date | string | null;
+  passkey: string;
 };
 
 const CREATE_TABLE = `
@@ -26,14 +28,21 @@ const CREATE_TABLE = `
     label text NOT NULL DEFAULT '',
     created_by text NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
-    revoked_at timestamptz
+    revoked_at timestamptz,
+    passkey text NOT NULL DEFAULT ''
   )
+`;
+
+const ADD_PASSKEY = `
+  ALTER TABLE form_links
+  ADD COLUMN IF NOT EXISTS passkey text NOT NULL DEFAULT ''
 `;
 
 let ready: Promise<void> | null = null;
 
 function ensureTable(): Promise<void> {
   ready ??= dbQuery(CREATE_TABLE)
+    .then(() => dbQuery(ADD_PASSKEY))
     .then(() => undefined)
     .catch((error: unknown) => {
       ready = null;
@@ -55,6 +64,7 @@ function mapRow(row: SqlRow): FormLink {
     createdBy: row.created_by,
     createdAt: asIso(row.created_at) ?? "",
     revokedAt: asIso(row.revoked_at),
+    passkey: row.passkey,
   };
 }
 
@@ -65,7 +75,7 @@ export function isFormToken(value: string): boolean {
 export async function listFormLinks(): Promise<FormLink[]> {
   await ensureTable();
   const rows = await dbQuery<SqlRow>(
-    `SELECT id, token, label, created_by, created_at, revoked_at
+    `SELECT id, token, label, created_by, created_at, revoked_at, passkey
      FROM form_links
      ORDER BY id DESC`,
   );
@@ -75,15 +85,35 @@ export async function listFormLinks(): Promise<FormLink[]> {
 export async function insertFormLink(input: {
   label: string;
   createdBy: string;
+  passkey: string;
 }): Promise<FormLink> {
   await ensureTable();
   const rows = await dbQuery<SqlRow>(
-    `INSERT INTO form_links (token, label, created_by)
-     VALUES ($1, $2, $3)
-     RETURNING id, token, label, created_by, created_at, revoked_at`,
-    [randomBytes(18).toString("base64url"), input.label, input.createdBy],
+    `INSERT INTO form_links (token, label, created_by, passkey)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, token, label, created_by, created_at, revoked_at, passkey`,
+    [randomBytes(18).toString("base64url"), input.label, input.createdBy, input.passkey],
   );
   return mapRow(rows[0]);
+}
+
+export async function passkeyMatches(token: string, passkey: string): Promise<boolean> {
+  if (!isFormToken(token)) return false;
+  const word = passkey.trim();
+  if (!word) return false;
+  await ensureTable();
+  const rows = await dbQuery<{ passkey: string }>(
+    `SELECT passkey
+     FROM form_links
+     WHERE token = $1 AND revoked_at IS NULL`,
+    [token],
+  );
+  const stored = rows[0]?.passkey ?? "";
+  if (!stored) return false;
+  const actual = Buffer.from(word);
+  const expected = Buffer.from(stored);
+  if (actual.length !== expected.length) return false;
+  return timingSafeEqual(actual, expected);
 }
 
 export async function revokeFormLink(id: number): Promise<void> {
@@ -98,7 +128,7 @@ export async function findActiveFormLink(token: string): Promise<FormLink | null
   if (!isFormToken(token)) return null;
   await ensureTable();
   const rows = await dbQuery<SqlRow>(
-    `SELECT id, token, label, created_by, created_at, revoked_at
+    `SELECT id, token, label, created_by, created_at, revoked_at, passkey
      FROM form_links
      WHERE token = $1 AND revoked_at IS NULL`,
     [token],

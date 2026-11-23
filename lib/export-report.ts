@@ -1,5 +1,6 @@
-import { formatDate } from "./format";
 import type { ChartSeries } from "./charts";
+import { formatDate } from "./format";
+import { copy, describeActivities, fill, translateTerm, type Locale } from "./messages";
 import type { Filters, Metrics, Submission } from "./types";
 
 export const KPI_ITEMS: Array<{
@@ -16,13 +17,11 @@ export const KPI_ITEMS: Array<{
   { key: "educated", label: "Waliofikiwa na Elimu", kind: "count" },
   { key: "condoms", label: "Kondomu zilizogawanywa", kind: "count" },
   { key: "pep", label: "Dawa Kinga/PEP/PrEP zilizogawanywa", kind: "count" },
+  { key: "selfTests", label: "Jipime/Self test kit zilizogawanywa", kind: "count" },
+  { key: "positivity", label: "Asilimia ya maambukizi", kind: "percent" },
+  { key: "linked", label: "Waliounganishwa na huduma", kind: "count" },
+  { key: "linkageRatio", label: "Asilimia ya kuunganishwa", kind: "percent" },
 ];
-
-const PLACE_NOUN = {
-  kanda: "kanda",
-  mkoa: "mkoa",
-  halmashauri: "halmashauri",
-} as const;
 
 export type ReportRow = {
   na: number;
@@ -50,7 +49,8 @@ export type ReportRow = {
   sampuli: string;
 };
 
-export function toReportRows(rows: Submission[]): ReportRow[] {
+export function toReportRows(rows: Submission[], locale: Locale = "sw"): ReportRow[] {
+  const t = copy[locale];
   return rows.map((row, index) => ({
     na: index + 1,
     tarehe: row.tarehe,
@@ -58,8 +58,8 @@ export function toReportRows(rows: Submission[]): ReportRow[] {
     mkoa: row.mkoa,
     halmashauri: row.halmashauri,
     shughuli: row.shughuli,
-    aina: row.aina,
-    hali: row.hali,
+    aina: describeActivities(locale, row.aina, row.nyingine),
+    hali: translateTerm(locale, row.hali),
     eneo: row.eneo,
     mdau: row.mdau,
     vvuMe: row.vvuMe,
@@ -74,19 +74,20 @@ export function toReportRows(rows: Submission[]): ReportRow[] {
     pep: row.pep,
     jipime: row.jipime,
     ushahidi: row.ushahidi,
-    sampuli: row.sample ? "Ndiyo" : "",
+    sampuli: row.sample ? t.words.yes : "",
   }));
 }
 
-export function describeFilters(filters: Filters): string {
+export function describeFilters(filters: Filters, locale: Locale = "sw"): string {
+  const t = copy[locale];
   const parts: string[] = [];
-  if (filters.kanda) parts.push(`Kanda ${filters.kanda}`);
-  if (filters.mkoa) parts.push(`Mkoa ${filters.mkoa}`);
-  if (filters.halmashauri) parts.push(`Halmashauri ${filters.halmashauri}`);
-  if (filters.aina) parts.push(`Aina ${filters.aina}`);
-  if (filters.kuanzia) parts.push(`Kuanzia ${formatDate(filters.kuanzia)}`);
-  if (filters.hadi) parts.push(`Hadi ${formatDate(filters.hadi)}`);
-  return parts.length > 0 ? parts.join(" · ") : "Taarifa zote";
+  if (filters.kanda) parts.push(`${t.fields.zone} ${filters.kanda}`);
+  if (filters.mkoa) parts.push(`${t.fields.region} ${filters.mkoa}`);
+  if (filters.halmashauri) parts.push(`${t.fields.council} ${filters.halmashauri}`);
+  if (filters.aina) parts.push(`${t.fields.activityType} ${translateTerm(locale, filters.aina)}`);
+  if (filters.kuanzia) parts.push(`${t.export.from} ${formatDate(filters.kuanzia)}`);
+  if (filters.hadi) parts.push(`${t.export.to} ${formatDate(filters.hadi)}`);
+  return parts.length > 0 ? parts.join(" · ") : t.export.allReports;
 }
 
 export function fileStamp(now = new Date()): string {
@@ -94,9 +95,11 @@ export function fileStamp(now = new Date()): string {
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
 }
 
-export function placeChartTitle(series: ChartSeries): string {
-  const noun = PLACE_NOUN[series.placeGrain];
-  return series.placeValue === "tested" ? `Waliopima kwa ${noun}` : `Shughuli kwa ${noun}`;
+export function placeChartTitle(series: ChartSeries, locale: Locale = "sw"): string {
+  const t = copy[locale];
+  const noun = t.places[series.placeGrain];
+  const template = series.placeValue === "tested" ? t.charts.testedBy : t.charts.activitiesBy;
+  return fill(template, { place: noun });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

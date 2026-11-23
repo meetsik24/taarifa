@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Login01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/app-icon";
+import { useCopy } from "@/components/language-provider";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 
@@ -16,6 +17,7 @@ export function LoginForm({
   next: string;
   error: "credentials" | "unavailable" | null;
 }) {
+  const t = useCopy();
   const [pending, setPending] = useState(false);
 
   return (
@@ -28,17 +30,17 @@ export function LoginForm({
       <input type="hidden" name="next" value={next} />
       {error === "credentials" ? (
         <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive" role="alert">
-          Barua pepe au nenosiri si sahihi.
+          {t.login.badCredentials}
         </p>
       ) : null}
       {error === "unavailable" ? (
         <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive" role="alert">
-          Hifadhidata haipatikani kwa sasa. Jaribu tena.
+          {t.login.unavailable}
         </p>
       ) : null}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="email" className="text-sm font-medium">
-          Barua pepe
+          {t.login.email}
         </label>
         <input
           id="email"
@@ -51,7 +53,7 @@ export function LoginForm({
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="password" className="text-sm font-medium">
-          Nenosiri
+          {t.login.password}
         </label>
         <input
           id="password"
@@ -64,7 +66,7 @@ export function LoginForm({
       </div>
       <button type="submit" className={cn(buttonVariants(), "w-full")} disabled={pending}>
         <AppIcon icon={Login01Icon} />
-        {pending ? "Inaingia…" : "Ingia"}
+        {pending ? t.login.pending : t.login.submit}
       </button>
     </form>
   );

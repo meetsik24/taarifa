@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { createPortal } from "react-dom";
 import { ArrowDown01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/app-icon";
+import { useCopy } from "@/components/language-provider";
 import { cn } from "cn";
 
 type Placement = {
@@ -23,7 +24,7 @@ export function SearchableSelect({
   name,
   value,
   options,
-  placeholder = "Chagua",
+  placeholder,
   disabled,
   required,
   invalid,
@@ -41,11 +42,14 @@ export function SearchableSelect({
   describedBy?: string;
   onValueChange: (value: string) => void;
 }) {
+  const t = useCopy();
+  const prompt = placeholder ?? t.words.choose;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const hiddenRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -57,6 +61,21 @@ export function SearchableSelect({
     if (!needle) return options;
     return options.filter((option) => matches(option, needle));
   }, [options, query]);
+
+  useEffect(() => {
+    const input = hiddenRef.current;
+    if (!input) return;
+    const form = input.form;
+    if (!form) return;
+    function restore(event: Event) {
+      event.preventDefault();
+      queueMicrotask(() => {
+        if (hiddenRef.current) hiddenRef.current.value = value;
+      });
+    }
+    form.addEventListener("reset", restore);
+    return () => form.removeEventListener("reset", restore);
+  }, [value]);
 
   useEffect(() => {
     if (!open || !placement || !shouldFocus.current) return;
@@ -179,8 +198,8 @@ export function SearchableSelect({
                   ref={searchRef}
                   type="search"
                   value={query}
-                  placeholder="Tafuta"
-                  aria-label="Tafuta"
+                  placeholder={t.words.search}
+                  aria-label={t.words.search}
                   aria-autocomplete="list"
                   aria-controls={listId}
                   aria-activedescendant={
@@ -198,7 +217,7 @@ export function SearchableSelect({
             <ul id={listId} role="listbox" className="min-h-0 flex-1 overflow-y-auto p-1">
               {filtered.length === 0 ? (
                 <li className="px-3 py-2 text-sm text-muted-foreground">
-                  {options.length === 0 ? "Hakuna chaguo" : "Hakuna inayolingana"}
+                  {options.length === 0 ? t.words.noOptions : t.words.noMatch}
                 </li>
               ) : (
                 filtered.map((option, index) => {
@@ -233,7 +252,7 @@ export function SearchableSelect({
 
   return (
     <div ref={rootRef} className="relative">
-      <input type="hidden" name={name} value={value} />
+      <input ref={hiddenRef} type="hidden" name={name} value={value} onChange={() => undefined} />
       <button
         ref={buttonRef}
         id={id}
@@ -265,7 +284,7 @@ export function SearchableSelect({
           }
         }}
       >
-        <span className="truncate">{value || placeholder}</span>
+        <span className="truncate">{value || prompt}</span>
       </button>
       <AppIcon
         icon={ArrowDown01Icon}
