@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { FormLinkManager } from "@/components/FormLinkManager";
+import { requireSuperAdmin } from "@/lib/auth";
 import { listFormLinks } from "@/lib/form-links";
 import { publicOriginFrom } from "@/lib/public-origin";
 import { getCopy } from "@/lib/locale";
@@ -14,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ShareFormPage() {
+  await requireSuperAdmin();
   const links = (await listFormLinks()).filter((link) => link.revokedAt === null);
   const origin = publicOriginFrom(await headers());
   const t = await getCopy();

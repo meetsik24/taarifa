@@ -20,11 +20,13 @@ const dateClass =
 
 export function Filters({
   filters,
+  zoneLock = "",
   shown,
   total,
   path = "/",
 }: {
   filters: Filters;
+  zoneLock?: string;
   shown: number;
   total: number;
   path?: string;
@@ -76,16 +78,18 @@ export function Filters({
               <NativeSelect
                 id="kanda"
                 name="kanda"
-                value={kanda}
+                value={zoneLock || kanda}
                 onChange={(event) => chooseZone(event.target.value)}
+                disabled={Boolean(zoneLock)}
               >
-                <option value="">{t.words.all}</option>
-                {KANDA.map((value) => (
+                {zoneLock ? null : <option value="">{t.words.all}</option>}
+                {(zoneLock ? [zoneLock] : KANDA).map((value) => (
                   <option key={value} value={value}>
                     {value}
                   </option>
                 ))}
               </NativeSelect>
+              {zoneLock ? <input type="hidden" name="kanda" value={zoneLock} /> : null}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="mkoa">{t.fields.region}</Label>

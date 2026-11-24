@@ -211,7 +211,10 @@ export async function insertSubmission(entry: NewSubmission): Promise<Submission
   return mapRow(rows[0]);
 }
 
-export async function deleteSamples(): Promise<number> {
-  const rows = await dbQuery<{ id: number }>("DELETE FROM submissions WHERE sample = true RETURNING id");
+export async function deleteSamples(zone = ""): Promise<number> {
+  const rows = await dbQuery<{ id: number }>(
+    "DELETE FROM submissions WHERE sample = true AND ($1 = '' OR kanda = $1) RETURNING id",
+    [zone],
+  );
   return rows.length;
 }

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS admins (
   email text NOT NULL UNIQUE,
   password_hash text NOT NULL,
   role text NOT NULL DEFAULT 'admin',
+  kanda text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 

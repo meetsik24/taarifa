@@ -28,6 +28,15 @@ export async function requireSuperAdmin(): Promise<SessionPayload> {
   return session;
 }
 
+/** Empty string means every zone. A zone name limits the dashboard to that zone. */
+export async function dashboardZone(): Promise<string> {
+  const session = await requireStaff();
+  if (session.role !== "admin") return "";
+  const admin = await findAdminByEmail(session.email);
+  if (!admin || admin.role !== "admin") return "";
+  return admin.kanda;
+}
+
 export function destinationFor(role: Role, next: string | undefined): string {
   return allowedNext(role, next ?? homeFor(role));
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { clearSamples } from "@/app/actions";
+import { dashboardZone } from "@/lib/auth";
 import { AppIcon } from "@/components/app-icon";
 import { DashboardChartsSlot } from "@/components/DashboardChartsSlot";
 import { DailyTable } from "@/components/DailyTable";
@@ -14,6 +15,7 @@ import { listSubmissions } from "@/lib/db";
 import { applyFilters, computeMetrics } from "@/lib/metrics";
 import { getCopy } from "@/lib/locale";
 import { fill } from "@/lib/messages";
+import { alignPlaceFilters } from "@/lib/places";
 import { EMPTY_FILTERS, type Filters as FilterValues } from "@/lib/types";
 
 export function ReportSkeleton() {
@@ -60,17 +62,21 @@ export async function ReportView({
     );
   }
 
-  const rows = applyFilters(all, filters);
+  const zoneLock = await dashboardZone();
+  const visible = zoneLock ? all.filter((row) => row.kanda === zoneLock) : all;
+  const place = alignPlaceFilters(zoneLock || filters.kanda, filters.mkoa, filters.halmashauri);
+  const scoped = { ...filters, ...place, kanda: zoneLock || place.kanda };
+  const rows = applyFilters(visible, scoped);
   const metrics = computeMetrics(rows);
   const charts = buildChartSeries(rows);
-  const samples = all.reduce((count, row) => count + (row.sample ? 1 : 0), 0);
+  const samples = visible.reduce((count, row) => count + (row.sample ? 1 : 0), 0);
   const filtering =
-    filters.kanda !== EMPTY_FILTERS.kanda ||
-    filters.mkoa !== EMPTY_FILTERS.mkoa ||
-    filters.halmashauri !== EMPTY_FILTERS.halmashauri ||
-    filters.aina !== EMPTY_FILTERS.aina ||
-    filters.kuanzia !== EMPTY_FILTERS.kuanzia ||
-    filters.hadi !== EMPTY_FILTERS.hadi;
+    (!zoneLock && scoped.kanda !== EMPTY_FILTERS.kanda) ||
+    scoped.mkoa !== EMPTY_FILTERS.mkoa ||
+    scoped.halmashauri !== EMPTY_FILTERS.halmashauri ||
+    scoped.aina !== EMPTY_FILTERS.aina ||
+    scoped.kuanzia !== EMPTY_FILTERS.kuanzia ||
+    scoped.hadi !== EMPTY_FILTERS.hadi;
 
   return (
     <>
@@ -89,12 +95,12 @@ export async function ReportView({
           </Card>
         </form>
       ) : null}
-      <ExportBar rows={rows} metrics={metrics} charts={charts} filters={filters} />
-      <Filters filters={filters} shown={rows.length} total={all.length} path={path} />
+      <ExportBar rows={rows} metrics={metrics} charts={charts} filters={scoped} />
+      <Filters filters={scoped} zoneLock={zoneLock} shown={rows.length} total={visible.length} path={path} />
       {view === "kpis" ? <KpiGrid metrics={metrics} /> : null}
       {view === "charts" ? <DashboardChartsSlot series={charts} /> : null}
       {view === "table" ? (
-        <DailyTable rows={rows} empty={all.length === 0 || !filtering ? "none" : "filtered"} />
+        <DailyTable rows={rows} empty={visible.length === 0 || !filtering ? "none" : "filtered"} />
       ) : null}
     </>
   );

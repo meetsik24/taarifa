@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { insertFormLink, revokeFormLink } from "@/lib/form-links";
-import { requireStaff } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { getCopy } from "@/lib/locale";
 
 export type LinkFormState = { error?: string; ok?: string; token?: string; passkey?: string } | null;
@@ -19,7 +19,7 @@ export async function createFormLink(
   _previous: LinkFormState,
   formData: FormData,
 ): Promise<LinkFormState> {
-  const session = await requireStaff();
+  const session = await requireSuperAdmin();
   const t = await getCopy();
   const passkey = cleanPasskey(formData.get("passkey"));
   if (passkey.length < 4) return { error: t.links.shortPasskey };
@@ -30,7 +30,7 @@ export async function createFormLink(
 }
 
 export async function stopFormLink(formData: FormData): Promise<void> {
-  await requireStaff();
+  await requireSuperAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id) || id <= 0) return;
   await revokeFormLink(id);

@@ -21,6 +21,14 @@ export function allowedNext(role: Role, next: string): string {
     return homeFor(role);
   }
   if (role === "filler") return next === "/andika" || next.startsWith("/andika/") ? next : "/andika";
-  if (role === "admin" && (next === "/wasimamizi" || next.startsWith("/wasimamizi/"))) return "/";
+  if (
+    role !== "super_admin" &&
+    (next === "/wasimamizi" ||
+      next.startsWith("/wasimamizi/") ||
+      next === "/jaza" ||
+      next.startsWith("/jaza/"))
+  ) {
+    return "/";
+  }
   return next;
 }

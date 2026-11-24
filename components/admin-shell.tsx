@@ -64,14 +64,19 @@ function NavList({
 }) {
   const pathname = usePathname();
   const t = useCopy();
-  const items = NAV.filter((item) => item.href !== "/wasimamizi" || role === "super_admin");
+  const items = NAV.filter(
+    (item) => role === "super_admin" || (item.href !== "/wasimamizi" && item.href !== "/jaza"),
+  );
 
   return (
     <div className="flex flex-col gap-5">
-      {SECTIONS.map((section) => (
+      {SECTIONS.map((section) => {
+        const sectionItems = items.filter((item) => item.section === section);
+        if (sectionItems.length === 0) return null;
+        return (
         <div key={section} className="flex flex-col gap-1">
           <p className="px-3 text-xs font-medium text-muted-foreground">{t.nav[section]}</p>
-          {items.filter((item) => item.section === section).map((item) => {
+          {sectionItems.map((item) => {
             const active = isActive(pathname, item.href);
             const href = search ? `${item.href}?${search}` : item.href;
             return (
@@ -94,7 +99,8 @@ function NavList({
             );
           })}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
